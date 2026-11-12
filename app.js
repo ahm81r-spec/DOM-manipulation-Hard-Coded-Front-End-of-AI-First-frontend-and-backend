@@ -113,8 +113,13 @@ const dom = {
   cartItemsList: document.getElementById("cartItemsList"),
   cartFooter: document.getElementById("cartFooter"),
   drawerSubtotal: document.getElementById("drawerSubtotal"),
+  checkOutSubtotal: document.getElementById("checkOutSubtotal"),
+  checkBtnOutSubtotal: document.getElementById("checkBtnOutSubtotal"),
   checkoutBtn: document.getElementById("checkoutBtn"),
   checkoutNote: document.getElementById("checkoutNote"),
+  modal: document.getElementById("checkout-modal"),
+  closeBtn: document.getElementById("close-checkout"),
+  checkoutForm: document.getElementById("checkout-form"),
 };
 
 /* ============================================================
@@ -205,8 +210,8 @@ function updateThumbnailHighlight(index) {
 /** Update gallery arrow disabled states and counter */
 function updateGalleryControls() {
   const total = PRODUCT.colors[state.selectedColor].images.length;
-  dom.galleryPrev.disabled = state.currentImageIndex === 0;
-  dom.galleryNext.disabled = state.currentImageIndex === total - 1;
+  //dom.galleryPrev.disabled = state.currentImageIndex === 0;
+  //dom.galleryNext.disabled = state.currentImageIndex === total - 1;
 
   // Counter (may be null if element removed from HTML)
   if (dom.imgCurrent) dom.imgCurrent.textContent = state.currentImageIndex + 1;
@@ -226,8 +231,8 @@ function updateGalleryControls() {
 
 /** Select a specific image index */
 function selectImage(index) {
-  const total = PRODUCT.colors[state.selectedColor].images.length;
-  if (index < 0 || index >= total) return;
+  //const total = PRODUCT.colors[state.selectedColor].images.length;
+  //if (index < 0 || index >= total) return;
 
   state.currentImageIndex = index;
   setMainImage(state.selectedColor, index);
@@ -240,6 +245,8 @@ function navigateGallery(direction) {
   const total = PRODUCT.colors[state.selectedColor].images.length;
   const next = state.currentImageIndex + direction;
   if (next >= 0 && next < total) selectImage(next);
+  if (next < 0) selectImage(total - 1);
+  if (next >= total) selectImage(0);
 }
 
 dom.galleryPrev.addEventListener("click", () => navigateGallery(-1));
@@ -481,6 +488,8 @@ function renderCartDrawer() {
 
   // Update subtotal
   dom.drawerSubtotal.textContent = formatPrice(cartTotalPrice());
+  dom.checkOutSubtotal.textContent = formatPrice(cartTotalPrice());
+  dom.checkBtnOutSubtotal.textContent = formatPrice(cartTotalPrice());
 
   // Reset checkout note when cart is re-rendered
   dom.checkoutNote.textContent = "";
@@ -537,19 +546,51 @@ document.addEventListener("keydown", (e) => {
 dom.checkoutBtn.addEventListener("click", () => {
   if (state.cart.length === 0) return;
 
-  const lines = state.cart
-    .map((item) => `${item.qty}× ${PRODUCT.name} (${item.colorName})`)
-    .join(", ");
+  // Open the pop-up checkout
+  dom.checkoutBtn.addEventListener("click", () => {
+    dom.modal.showModal();
+  });
 
-  dom.checkoutNote.textContent = `✅ Order placed: ${lines}. Total: ${formatPrice(cartTotalPrice())}`;
+  // Close when clicking the 'X' button
+  dom.closeBtn.addEventListener("click", () => {
+    dom.modal.close();
+  });
 
-  // Clear cart after "checkout"
-  setTimeout(() => {
-    state.cart = [];
-    updateCartBadge();
-    renderCartDrawer();
-    hideConfirmation();
-  }, 2500);
+  // Close when clicking outside the modal box (on the backdrop)
+  dom.modal.addEventListener("click", (event) => {
+    const rect = dom.modal.getBoundingClientRect();
+    const isInDialog =
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width;
+
+    if (!isInDialog) {
+      dom.modal.close();
+    }
+  });
+
+  // Handle form submission
+  dom.checkoutForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    // Trigger your payment gateway logic here
+    const lines = state.cart
+      .map((item) => `${item.qty}× ${PRODUCT.name} (${item.colorName})`)
+      .join(", ");
+
+    alert(
+      (dom.checkoutNote.textContent = `✅ Order placed: ${lines}. Total: ${formatPrice(cartTotalPrice())}`),
+    );
+    dom.modal.close();
+    // Clear cart after "checkout"
+    setTimeout(() => {
+      state.cart = [];
+      updateCartBadge();
+      renderCartDrawer();
+      hideConfirmation();
+    }, 2500);
+  });
 });
 
 /* ============================================================
